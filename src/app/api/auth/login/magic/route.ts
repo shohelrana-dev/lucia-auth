@@ -8,40 +8,20 @@ export async function GET(request: Request): Promise<Response> {
     const magicErrorUrl = LOGIN_URL + '/magic/error'
     try {
         if (!token) {
-            return new Response(null, {
-                status: 302,
-                headers: {
-                    Location: magicErrorUrl,
-                },
-            })
+            return Response.redirect(magicErrorUrl)
         }
 
         const user = await getVerificationToken(token, 'magic_link')
 
         if (!user || user.tokenExpiresAt < new Date()) {
-            return new Response(null, {
-                status: 302,
-                headers: {
-                    Location: magicErrorUrl,
-                },
-            })
+            return Response.redirect(magicErrorUrl)
         }
 
         await createSession(user.id)
 
-        return new Response(null, {
-            status: 302,
-            headers: {
-                Location: AFTER_LOGIN_REDIRECT_URL,
-            },
-        })
+        return Response.redirect(AFTER_LOGIN_REDIRECT_URL)
     } catch (err) {
         console.error(err)
-        return new Response(null, {
-            status: 302,
-            headers: {
-                Location: magicErrorUrl,
-            },
-        })
+        return Response.redirect(magicErrorUrl)
     }
 }

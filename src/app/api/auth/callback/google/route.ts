@@ -3,7 +3,6 @@ import { google } from '@/lib/auth'
 import { createSession } from '@/lib/session'
 import { createAccountViaGoogle, getAccountByGoogleId } from '@/services/accounts'
 import { createUser, getUserByEmail } from '@/services/users'
-import { redirect } from 'next/navigation'
 import { NextRequest } from 'next/server'
 
 export async function GET(request: NextRequest): Promise<Response> {
@@ -16,12 +15,12 @@ export async function GET(request: NextRequest): Promise<Response> {
     const error = url.searchParams.get('error')
 
     if (error) {
-        redirect(LOGIN_URL + '?authError=' + error)
+        return Response.redirect(LOGIN_URL + '?authError=' + error)
     }
 
     // verify state
     if (!state || !stateCookie || !code || stateCookie !== state || !codeVerifier) {
-        redirect(LOGIN_URL + '?authError=unknown_error')
+        return Response.redirect(LOGIN_URL + '?authError=unknown_error')
     }
 
     try {
@@ -52,10 +51,10 @@ export async function GET(request: NextRequest): Promise<Response> {
 
         await createSession(account.userId)
 
-        redirect(AFTER_LOGIN_REDIRECT_URL)
+        return Response.redirect(AFTER_LOGIN_REDIRECT_URL)
     } catch (e: any) {
         console.log(e)
-        redirect(LOGIN_URL + '?authError=' + e.message)
+        return Response.redirect(LOGIN_URL + '?authError=' + e.message)
     }
 }
 

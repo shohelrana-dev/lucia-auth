@@ -3,7 +3,6 @@ import { facebook } from '@/lib/auth'
 import { createSession } from '@/lib/session'
 import { createAccountViaFacebook, getAccountByFacebookId } from '@/services/accounts'
 import { createUser } from '@/services/users'
-import { redirect } from 'next/navigation'
 import { NextRequest } from 'next/server'
 
 export async function GET(request: NextRequest): Promise<Response> {
@@ -15,12 +14,12 @@ export async function GET(request: NextRequest): Promise<Response> {
     const error = url.searchParams.get('error')
 
     if (error) {
-        redirect(LOGIN_URL + '?authError=' + error)
+        return Response.redirect(LOGIN_URL + '?authError=' + error)
     }
 
     // verify state
     if (!state || !stateCookie || !code || stateCookie !== state) {
-        redirect(LOGIN_URL + '?authError=unknown_rror')
+        return Response.redirect(LOGIN_URL + '?authError=unknown_rror')
     }
 
     try {
@@ -38,10 +37,10 @@ export async function GET(request: NextRequest): Promise<Response> {
         }
 
         await createSession(account.userId)
-        redirect(AFTER_LOGIN_REDIRECT_URL)
+        return Response.redirect(AFTER_LOGIN_REDIRECT_URL)
     } catch (e: any) {
         console.log(e)
-        redirect(encodeURI(LOGIN_URL + '?authError=' + e.message))
+        return Response.redirect(encodeURI(LOGIN_URL + '?authError=' + e.message))
     }
 }
 

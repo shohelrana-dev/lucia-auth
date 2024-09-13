@@ -10,7 +10,7 @@ import { InputGroup } from '../input-group'
 import { SubmitButton } from '../submit-button'
 
 export function MagicLinkForm() {
-    const { register, formState, handleSubmit } = useForm<{ email: string }>({
+    const { register, formState, handleSubmit, reset } = useForm<{ email: string }>({
         mode: 'all',
         resolver: zodResolver(z.object({ email: emailValidation })),
     })
@@ -26,6 +26,7 @@ export function MagicLinkForm() {
                 router.push('/verify-email?email=' + error.data.email)
             }
         } else {
+            reset()
             toast.success(success.message)
         }
     }
