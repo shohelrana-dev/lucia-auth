@@ -10,22 +10,25 @@ import { InputGroup } from '../input-group'
 import { SubmitButton } from '../submit-button'
 
 export function SignupForm() {
-    const { register, formState, handleSubmit } = useForm<SignupPayload>({
+    const { register, formState, handleSubmit, setError } = useForm<SignupPayload>({
         mode: 'all',
         resolver: zodResolver(signupSchema),
     })
     const router = useRouter()
     const { errors, isSubmitting } = formState
 
-    async function processForm(data: SignupPayload) {
-        const [error, success] = await signupAction(data)
+    async function processForm(payload: SignupPayload) {
+        const [data, error] = await signupAction(payload)
 
         if (error) {
+            if (error.inputError) {
+                setError(error.inputError.name as any, { message: error.inputError.message })
+            }
             return toast.error(error.message)
         }
 
-        toast.success(success.message)
-        router.push('/verify-email?email=' + success.data?.email)
+        toast.success(data.message)
+        router.push('/verify-email?email=' + payload.email)
     }
     return (
         <form onSubmit={handleSubmit(processForm)} className='flex flex-col gap-3'>

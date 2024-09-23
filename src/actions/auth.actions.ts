@@ -16,7 +16,6 @@ import {
     loginSchema,
     ResetPasswordPayload,
     resetPasswordSchema,
-    SignupPayload,
     signupSchema,
 } from '@/lib/zod'
 import {
@@ -82,14 +81,14 @@ export async function logoutAction() {
     revalidatePath('/')
 }
 
-export async function signupAction(data: SignupPayload) {
-    try {
-        const { name, email, password } = await signupSchema.parseAsync(data)
-        console.log(name, email, password)
+export const signupAction = createServerAction()
+    .schema(signupSchema)
+    .handler(async (data) => {
+        const { name, email, password } = data || {}
 
         const findUser = await getUserByEmail(email)
         if (findUser) {
-            return actionResult('error', 'Email already exists.')
+            throw new InputError('email', 'Email already exists.')
         }
 
         const user = await createUser({
@@ -106,15 +105,8 @@ export async function signupAction(data: SignupPayload) {
             react: VerifyEmail({ name: user.name, verificationCode: token }),
         })
 
-        return actionResult('success', 'Please verify your email.', user)
-    } catch (e) {
-        console.log(e)
-        if (e instanceof ZodError) {
-            return actionResult('error', 'Invalid form data')
-        }
-        return actionResult('error', 'Something went wrong. Please try again.')
-    }
-}
+        return { message: 'Please verify your email.', user }
+    })
 
 export async function verifyEmailAction(prevState: unknown, formData: FormData) {
     try {

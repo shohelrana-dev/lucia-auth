@@ -1,13 +1,13 @@
 import * as React from 'react'
 
-import { SITE_NAME, SITE_URL } from '@/app-config'
+import { SITE_NAME } from '@/app-config'
 import {
     Body,
     Container,
     Head,
+    Heading,
     Hr,
     Html,
-    Img,
     Link,
     Section,
     Tailwind,
@@ -19,7 +19,7 @@ interface Props {
     name: string
 }
 
-export function MagicLinkEmail({ url, name }: Props) {
+export default function MagicLinkEmail({ url, name }: Props) {
     return (
         <Html>
             <Head />
@@ -27,19 +27,10 @@ export function MagicLinkEmail({ url, name }: Props) {
                 <React.Fragment>
                     <Body className='mx-auto my-auto bg-white font-sans'>
                         <Container className='mx-auto my-[40px] w-[465px] rounded border border-solid border-[#eaeaea] p-[20px]'>
-                            <Section className='mt-[32px]'>
-                                <Img
-                                    src={`${SITE_URL}/group.jpeg`}
-                                    width='160'
-                                    height='48'
-                                    alt='StarterKit'
-                                    className='mx-auto my-0'
-                                />
-                            </Section>
-
                             <Section className='mb-[32px] mt-[32px] text-center'>
+                                <Heading className='text-lg'>Hey, {name}</Heading>
                                 <Text className='mb-8 text-[14px] font-medium leading-[24px] text-black'>
-                                    You&apos;re magic link login is below, click to login. group.
+                                    You&apos;re magic link login is below, click to login.
                                 </Text>
 
                                 <Text className='text-[14px] font-medium leading-[24px] text-black'>
@@ -65,3 +56,8 @@ export function MagicLinkEmail({ url, name }: Props) {
         </Html>
     )
 }
+
+MagicLinkEmail.PreviewProps = {
+    url: '#',
+    name: 'Alan Turing',
+} as Props

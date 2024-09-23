@@ -11,6 +11,7 @@ import { SubmitButton } from '../submit-button'
 export function ResetPasswordForm({ token }: { token: string }) {
     const { handleSubmit, register, formState } = useForm<ResetPasswordPayload>({
         resolver: zodResolver(resetPasswordSchema),
+        mode: 'all',
     })
     const router = useRouter()
     const { errors, isSubmitting } = formState
@@ -32,14 +33,14 @@ export function ResetPasswordForm({ token }: { token: string }) {
             <InputGroup
                 type='password'
                 label='Password'
-                {...register('password')}
                 error={errors.password}
+                {...register('password')}
             />
             <InputGroup
                 type='password'
                 label='Confirm password'
-                {...register('confirmPassword')}
                 error={errors.confirmPassword}
+                {...register('confirmPassword')}
             />
             <SubmitButton isSubmitting={isSubmitting}>Reset Password</SubmitButton>
         </form>

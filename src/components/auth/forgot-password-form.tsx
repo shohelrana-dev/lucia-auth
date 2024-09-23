@@ -11,6 +11,7 @@ import { SubmitButton } from '../submit-button'
 export function ForgotPasswordForm() {
     const { handleSubmit, register, formState, reset } = useForm<{ email: string }>({
         resolver: zodResolver(z.object({ email: emailValidation })),
+        mode: 'all',
     })
     const { errors, isSubmitting } = formState
 
