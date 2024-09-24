@@ -2,7 +2,6 @@
 import { sendMagicLinkAction } from '@/actions/auth.actions'
 import { emailValidation } from '@/lib/zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -10,25 +9,23 @@ import { InputGroup } from '../input-group'
 import { SubmitButton } from '../submit-button'
 
 export function MagicLinkForm() {
-    const { register, formState, handleSubmit, reset } = useForm<{ email: string }>({
+    const { register, formState, handleSubmit, reset, setError } = useForm<{ email: string }>({
         mode: 'all',
         resolver: zodResolver(z.object({ email: emailValidation })),
     })
-    const router = useRouter()
     const { errors, isSubmitting } = formState
 
-    async function processForm(data: { email: string }) {
-        const [error, success] = await sendMagicLinkAction(data.email)
+    async function processForm({ email }: { email: string }) {
+        const [data, error] = await sendMagicLinkAction({ email })
 
         if (error) {
-            toast.error(error.message)
-            if (error.data && !error.data.emailVerifiedAt) {
-                router.push('/verify-email?email=' + error.data.email)
+            if (error.inputError) {
+                setError(error.inputError.name as any, { message: error.inputError.message })
             }
-        } else {
-            reset()
-            toast.success(success.message)
+            return toast.error(error.message)
         }
+        reset()
+        toast.success(data.message)
     }
 
     return (

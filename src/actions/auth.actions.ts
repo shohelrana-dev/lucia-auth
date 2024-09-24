@@ -1,7 +1,7 @@
 'use server'
 
 import { SITE_NAME, SITE_URL } from '@/app-config'
-import { MagicLinkEmail } from '@/emails/magic-link'
+import MagicLinkEmail from '@/emails/magic-link'
 import PasswordResetEmail from '@/emails/password-reset'
 import VerifyEmail from '@/emails/verify-email'
 import { facebook, google } from '@/lib/auth'
@@ -9,12 +9,10 @@ import { ActionError, InputError } from '@/lib/error'
 import { sendEmail } from '@/lib/mail'
 import { createServerAction } from '@/lib/safe-action'
 import { clearSession, createSession } from '@/lib/session'
-import { actionResult } from '@/lib/utils'
 import {
     emailValidation,
     emailVerificationSchema,
     loginSchema,
-    ResetPasswordPayload,
     resetPasswordSchema,
     signupSchema,
 } from '@/lib/zod'
@@ -35,7 +33,7 @@ import { generateCodeVerifier, generateState } from 'arctic'
 import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { ZodError } from 'zod'
+import { z } from 'zod'
 
 export async function loginViaGoogleAction() {
     const state = generateState()
@@ -108,41 +106,33 @@ export const signupAction = createServerAction()
         return { message: 'Please verify your email.', user }
     })
 
-export async function verifyEmailAction(prevState: unknown, formData: FormData) {
-    try {
-        const { email, code } = await emailVerificationSchema.parseAsync(
-            Object.fromEntries(formData.entries())
-        )
+export const verifyEmailAction = createServerAction()
+    .schema(emailVerificationSchema)
+    .handler(async (input) => {
+        const { email, code } = input || {}
 
         const verificationToken = await getVerificationToken(code, 'email_verification')
 
         if (!verificationToken) {
-            return actionResult('error', 'Invalid verification code.')
+            throw new InputError('code', 'Invalid verification code.')
         }
         if (verificationToken.tokenExpiresAt < new Date()) {
-            return actionResult('error', 'Verification code expired.')
+            throw new InputError('code', 'Verification code expired.')
         }
 
         const user = await getUserByEmail(email)
 
-        if (!user) return actionResult('error', 'User not found.')
+        if (!user) throw new Error('User not found.')
         if (user.emailVerifiedAt) {
-            return actionResult('error', 'Email already verified.')
+            throw new Error('Email already verified.')
         }
 
         await setemailVerifiedAt(user.id)
 
         deleteVerificationToken(code)
 
-        return actionResult('success', 'Email verified. You can now login.')
-    } catch (e) {
-        console.log(e)
-        if (e instanceof ZodError) {
-            return actionResult('error', (e.format() as any).code._errors[0] ?? 'Validation error')
-        }
-        return actionResult('error', 'Something went wrong. Please try again.')
-    }
-}
+        return { message: 'Email verified. You can now login.' }
+    })
 
 export const loginAction = createServerAction()
     .schema(loginSchema)
@@ -174,39 +164,36 @@ export const loginAction = createServerAction()
         return { message: 'Logged in.' }
     })
 
-export async function resendVerificationEmailAction(prevState: unknown, formData: FormData) {
-    const { email } = Object.fromEntries(formData.entries()) as {
-        email: string
-    }
-
-    if (!email) return actionResult('error', 'Email is required.')
-
-    const user = await getUserByEmail(email)
-    if (!user) return actionResult('error', 'User not found.')
-
-    if (user.emailVerifiedAt) return actionResult('error', 'Email already verified.')
-
-    const token = await generateVerficationToken(user.id, 'email_verification')
-
-    await sendEmail({
-        to: email,
-        subject: `Email Verification Code ${token}`,
-        react: VerifyEmail({ name: user.name, verificationCode: token }),
-    })
-
-    return actionResult('success', 'Email verification code sent.')
-}
-
-export async function forgotPasswordAction(_email: string) {
-    try {
-        const email = await emailValidation.parseAsync(_email)
+export const resendVerificationEmailAction = createServerAction()
+    .schema(z.object({ email: emailValidation }))
+    .handler(async (input) => {
+        const { email } = input || {}
 
         const user = await getUserByEmail(email)
-        if (!user) return actionResult('error', 'User not found.')
+        if (!user) throw new Error('User not found.')
+
+        if (user.emailVerifiedAt) throw new Error('Email already verified.')
+
+        const token = await generateVerficationToken(user.id, 'email_verification')
+
+        await sendEmail({
+            to: email,
+            subject: `Email Verification Code ${token}`,
+            react: VerifyEmail({ name: user.name, verificationCode: token }),
+        })
+
+        return { message: 'Email verification code sent.' }
+    })
+
+export const forgotPasswordAction = createServerAction()
+    .schema(z.object({ email: emailValidation }))
+    .handler(async ({ email } = {}) => {
+        const user = await getUserByEmail(email)
+        if (!user) throw new InputError('email', 'User not found with the email.')
 
         const account = await getAccountByUserIdAndAccountType(user.id, 'email')
         if (!account) {
-            return actionResult('error', 'Account not found for email and password login.')
+            throw new InputError('email', 'Account not found for email and password login.')
         }
 
         const token = await generateVerficationToken(user.id, 'password_reset', false)
@@ -220,57 +207,36 @@ export async function forgotPasswordAction(_email: string) {
             }),
         })
 
-        return actionResult(
-            'success',
-            'Password reset link sent to your email. Please check your email.'
-        )
-    } catch (e) {
-        console.log(e)
-        if (e instanceof ZodError) {
-            return actionResult('error', 'Invalid form data.')
-        }
-        return actionResult('error', 'Something went wrong. Please try again.')
-    }
-}
+        return { message: 'Password reset link sent to your email. Please check your email.' }
+    })
 
-export async function resetPasswordAction(data: ResetPasswordPayload) {
-    try {
-        const { password, token } = await resetPasswordSchema.parseAsync(data)
+export const resetPasswordAction = createServerAction()
+    .schema(resetPasswordSchema)
+    .handler(async (input) => {
+        const { password, token } = input || {}
 
         const tokenData = await getVerificationToken(token, 'password_reset')
-        if (!tokenData) return actionResult('error', 'Invalid token.')
+        if (!tokenData) throw new Error('Invalid token.')
 
         const account = await getAccountByUserIdAndAccountType(tokenData.userId, 'email')
 
         if (!account) {
-            return actionResult('error', 'Account not found')
+            throw new Error('Account not found')
         }
         if (tokenData.tokenExpiresAt < new Date()) {
-            return actionResult('error', 'Token expired')
+            throw new Error('Token expired')
         }
 
         await updateAccountPassword(account.id, password)
 
-        return actionResult('success', 'Password reset successfully')
-    } catch (e) {
-        console.log(e)
-        if (e instanceof ZodError) {
-            return actionResult('error', 'Invalid form data')
-        }
-        return actionResult('error', 'Something went wrong. Please try again.')
-    }
-}
+        return { message: 'Password reset successfully' }
+    })
 
-export async function sendMagicLinkAction(_email: string) {
-    try {
-        const email = await emailValidation.parseAsync(_email)
-
+export const sendMagicLinkAction = createServerAction()
+    .schema(z.object({ email: emailValidation }))
+    .handler(async ({ email } = {}) => {
         const user = await getUserByEmail(email)
-        if (!user) return actionResult('error', 'User not found.')
-
-        if (!user.emailVerifiedAt) {
-            return actionResult('error', 'Please verify your email first.', user)
-        }
+        if (!user) throw new InputError('email', 'User not found with the email')
 
         const token = await generateVerficationToken(user.id, 'magic_link')
 
@@ -282,12 +248,5 @@ export async function sendMagicLinkAction(_email: string) {
             react: MagicLinkEmail({ name: user.name, url }),
         })
 
-        return actionResult('success', 'Magic link sent to your email. Please check your email.')
-    } catch (e) {
-        console.log(e)
-        if (e instanceof ZodError) {
-            return actionResult('error', 'Invalid email.')
-        }
-        return actionResult('error', 'Something went wrong. Please try again.')
-    }
-}
+        return { message: 'Magic link sent to your email. Please check your email.' }
+    })

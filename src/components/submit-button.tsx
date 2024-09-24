@@ -14,7 +14,7 @@ export function SubmitButton({ children, isSubmitting, ...rest }: Props) {
     if (isSubmitting || pending) {
         return (
             <Button size='sm' disabled={true} {...rest}>
-                <BeatLoader size={8} color={rest.variant === 'outline' ? '#000' : '#fff'} />
+                <BeatLoader size={8} color={rest.variant ? '#000' : '#fff'} />
             </Button>
         )
     }

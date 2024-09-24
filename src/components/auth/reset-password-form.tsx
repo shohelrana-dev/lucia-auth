@@ -16,14 +16,14 @@ export function ResetPasswordForm({ token }: { token: string }) {
     const router = useRouter()
     const { errors, isSubmitting } = formState
 
-    async function processForm(data: ResetPasswordPayload) {
-        const [error, success] = await resetPasswordAction(data)
+    async function processForm(input: ResetPasswordPayload) {
+        const [data, error] = await resetPasswordAction(input)
 
         if (error) {
             return toast.error(error.message)
         }
 
-        toast.success(success.message)
+        toast.success(data.message)
         router.push('/login')
     }
 

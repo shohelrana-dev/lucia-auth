@@ -1,7 +1,7 @@
 import { Toast } from '@/components/toast'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
-import { Ban } from 'lucide-react'
+import { Info } from 'lucide-react'
 import Link from 'next/link'
 
 export default function MagicErrorPage() {
@@ -13,7 +13,7 @@ export default function MagicErrorPage() {
                 <CardHeader className='text-center'>
                     <h2 className='text-2xl font-extrabold'>
                         <div className='flex items-center justify-center mb-3'>
-                            <Ban size={60} className='text-destructive' />
+                            <Info size={60} className='text-destructive' />
                         </div>
                         <p>Magic link error!</p>
                     </h2>
